@@ -17,7 +17,11 @@ async function bootstrap() {
     }),
   );
 
-  app.enableCors();
+  app.enableCors({
+  origin: ['http://localhost:5173', 'https://tda-academy.netlify.app'],
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+  credentials: true,
+});
 
   // Swagger docs
   const config = new DocumentBuilder()
