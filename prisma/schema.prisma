@@ -1,0 +1,111 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Teacher Auth ────────────────────────────────────────────────────────────
+
+model Teacher {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  classes Class[]
+}
+
+// ─── Academic Structure ──────────────────────────────────────────────────────
+
+model Class {
+  id        String   @id @default(uuid())
+  name      String                       // e.g. "Pre-Rally", "Rally 1"
+  site      String                       // e.g. "Campbell Site"
+  room      String?                      // e.g. "Room 302", "Wing B"
+  icon      String?                      // icon type identifier
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id])
+
+  schedules  Schedule[]
+  enrollments Enrollment[]
+}
+
+model Schedule {
+  id        String    @id @default(uuid())
+  classId   String
+  class     Class     @relation(fields: [classId], references: [id], onDelete: Cascade)
+  dayOfWeek DayOfWeek
+  startTime String                        // e.g. "16:05"
+  endTime   String                        // e.g. "17:00"
+  createdAt DateTime  @default(now())
+
+  attendances Attendance[]
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+// ─── Students ────────────────────────────────────────────────────────────────
+
+model Student {
+  id          String   @id @default(uuid())
+  studentCode String   @unique                // e.g. "2023-0041"
+  name        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  enrollments Enrollment[]
+  attendances Attendance[]
+}
+
+model Enrollment {
+  id        String   @id @default(uuid())
+  studentId String
+  classId   String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([studentId, classId])
+}
+
+// ─── Attendance ──────────────────────────────────────────────────────────────
+
+model Attendance {
+  id         String           @id @default(uuid())
+  studentId  String
+  scheduleId String
+  date       DateTime         @db.Date         // the calendar date of the session
+  status     AttendanceStatus
+  reason     String?                           // for EXCUSED status
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  student  Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  schedule Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, scheduleId, date])
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  EXCUSED
+}
